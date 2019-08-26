@@ -11,6 +11,7 @@ import subprocess
 import base64
 from math import sin, cos, atan, atan2, sqrt, pi, radians, degrees
 import tempfile
+import urllib
 
 from shapely.geometry import Point
 import requests
@@ -342,7 +343,7 @@ def download_topography(tile_ids, path, high_definition=False):
 
     # Set download parameters
     project_id = '1526685'
-    url = 'https://gitlab.com/api/v3/projects/{!s}/repository/files/'.\
+    url = 'https://gitlab.com/api/v4/projects/{!s}/repository/files/'.\
       format(project_id)
     if high_definition:
         file_names = ['srtm1/{!s}.SRTMGL1.hgt.zip'.format(t) for t in tile_ids]
@@ -355,12 +356,12 @@ def download_topography(tile_ids, path, high_definition=False):
         path.mkdir(parents=True)
 
     # Download
+    params = {'ref': 'master',}
     for file_name in file_names:
-        params={
-            'file_path': file_name,
-            'ref': 'master',
-            }
-        r = requests.get(url, params=params, stream=True)
+        file_url = '{url}{file_id}'.format(
+            url=url,
+            file_id=urllib.parse.quote_plus(file_name))
+        r = requests.get(file_url, params=params, stream=True)
 
         if r.status_code != requests.codes.ok:
             raise ValueError('Downloading file {!s} failed with status '\
@@ -668,14 +669,14 @@ def compute_look_angles(lon, lat, height, satellite_lon):
 
 def get_geoid_height(lon, lat, num_tries=3):
     """
-    Query http://geographiclib.sourceforge.net/cgi-bin/GeoidEval for the height in meters of the EGM96 geoid above the WGS84 ellipsoid for the given longitude and latitude. 
+    Query https://geographiclib.sourceforge.io/cgi-bin/GeoidEval for the height in meters of the EGM96 geoid above the WGS84 ellipsoid for the given longitude and latitude. 
     If the result is negative, then the geoid lies below the ellipsoid.
     Raise a ``ValueError`` if the query fails after ``num_tries`` tries.
 
     NOTES:
-        - It would be good to rewrite this function so that it does not depend on internet access. For a starters, see `https://github.com/vandry/geoidheight <https://github.com/vandry/geoidheight>`_, which uses the EGM2008 ellipsoid.
+        - It would be good to rewrite this function so that it does not depend on internet access. For starters, see `https://github.com/vandry/geoidheight <https://github.com/vandry/geoidheight>`_, which uses the EGM2008 ellipsoid.
     """
-    url = 'http://geographiclib.sourceforge.net/cgi-bin/GeoidEval'
+    url = 'https://geographiclib.sourceforge.io/cgi-bin/GeoidEval'
     data = {'input': '{!s}+{!s}'.format(lat, lon)}
     pattern = r'EGM96</a>\s*=\s*<font color="blue">([\d\.\-]+)</font>'
     
